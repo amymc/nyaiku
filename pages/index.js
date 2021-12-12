@@ -85,6 +85,7 @@ export async function getStaticProps() {
 
   const countSyllables = (word) => {
     let numSylls = 0;
+    console.log({ word });
     let phonemeStr = cmudict.get(word);
     console.log("cmudict[word]", phonemeStr);
 
@@ -347,7 +348,7 @@ export async function getStaticProps() {
     const accepted_words = [];
     let suffixes = suffixMap[prefix];
     if (suffixes) {
-      for (candidate of suffixes) {
+      for (let candidate of suffixes) {
         numSyls = count_syllables(candidate);
         if (currentSyls + numSyls <= targetSyls) {
           acceptedWords.concat(candidate);
@@ -357,25 +358,6 @@ export async function getStaticProps() {
       return accepted_words;
     }
   };
-
-  // const wordAfterSingle = (prefix, suffixMap2, currentSyls, targetSyls)=> {
-  //  const accepted_words = []
-  // let suffixes = suffixMap2[prefix]
-  // if (suffixes) {
-  //   for (candidate of suffixes) {
-  //   numSyls = count_syllables(candidate)
-  //   if (currentSyls + numSyls <= targetSyls){
-  //     acceptedWords.concat(candidate)
-  //   }
-  // }
-
-  // if suffixes != None:
-  //     for candidate in suffixes:
-  //         num_syls = count_syllables(candidate)
-  //         if current_syls + num_syls <= target_syls:
-  //             accepted_words.append(candidate)
-  // logging.debug('accepted words after "%s" = %s\n', prefix, set(accepted_words))
-  // return accepted_words
 
   const final = [];
   const endPrevLine = [];
