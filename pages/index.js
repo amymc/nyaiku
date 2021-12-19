@@ -1,11 +1,278 @@
 import Head from "next/head";
 import Image from "next/image";
-import { CMUDict } from "cmudict";
+// import { CMUDict } from "cmudict";
 import axios from "axios";
+import cmudict from "@stdlib/datasets-cmudict";
 
 import styles from "../styles/Home.module.css";
 
-const Home = () => {
+const Home = ({ suffixMap1, suffixMap2, corpus }) => {
+  const { dict } = cmudict();
+  debugger;
+  const generate = () => {
+    console.log({ suffixMap1, suffixMap2, corpus });
+    const countSyllables = (word, corpus) => {
+      let numSyls = 0;
+
+      let phonemeStr = dict[word.toUpperCase()];
+      console.log({ phonemeStr });
+      console.log(word.toUpperCase());
+      // console.log({ dict });
+      // debugger;
+
+      if (word.endsWith("'s") || word.endsWith("’s")) {
+        word = word.slice(0, word.length - 2);
+        phonemeStr = dict[word];
+        // console.log({ phonemeStr });
+
+        if (!phonemeStr) {
+          return countSyllables(
+            corpus[Math.floor(Math.random() * corpus.length)],
+            corpus
+          );
+        }
+
+        const phonemes = phonemeStr.split(" ");
+        for (const phoneme of phonemes) {
+          const lastChar = phoneme.slice(phoneme.length - 1);
+          if (Number.isInteger(parseInt(lastChar, 10))) {
+            numSyls += 1;
+          }
+        }
+      } else if (phonemeStr) {
+        // # hasattr(cmudict, word):
+        // # else:
+        // # print(cmudict[word])
+        const phonemes = phonemeStr.split(" ");
+
+        for (const phoneme of phonemes) {
+          const lastChar = phoneme.slice(phoneme.length - 1);
+          console.log({ lastChar });
+          if (Number.isInteger(parseInt(lastChar, 10))) {
+            numSyls += 1;
+          }
+        }
+      }
+
+      if (numSyls === 0) {
+        return countSyllables(
+          corpus[Math.floor(Math.random() * corpus.length)],
+          corpus
+        );
+      }
+
+      // # else:
+      // #     return None
+      // #     num_sylls += 1
+      return numSyls;
+    };
+
+    const constructHaikuLine = (
+      suffixMap1,
+      suffixMap2,
+      corpus,
+      endPrevLine,
+      targetSyls
+    ) => {
+      let line = "2/3";
+      let lineSyls = 0;
+      let currentLine = [];
+
+      //build first line
+      if (endPrevLine.length == 0) {
+        line = "1";
+        console.log({ corpus });
+        let stuff = randomWord(corpus);
+        console.log("stuff", stuff);
+        let { word, numSyls } = stuff;
+
+        if (numSyls == 0) {
+          return constructHaikuLine(
+            suffixMap1,
+            suffixMap2,
+            corpus,
+            endPrevLine,
+            targetSyls
+          );
+        }
+
+        currentLine.concat(word);
+        lineSyls += numSyls;
+        let wordChoices = wordAfterSingle(
+          word,
+          suffixMap1,
+          lineSyls,
+          targetSyls,
+          corpus
+        );
+        console.log({ word, wordChoices });
+
+        while (wordChoices.length == 0) {
+          // const prefix = random.choice(corpus)
+          console.log("here", { wordChoices });
+
+          const prefix = corpus[Math.floor(Math.random() * corpus.length)];
+          wordChoices = wordAfterSingle(
+            prefix,
+            suffixMap1,
+            lineSyls,
+            targetSyls,
+            corpus
+          );
+        }
+        // # word = random.choice(word_choices)
+        // # numSyls = count_syllables(word)
+
+        const result = getNumSyls(wordChoices);
+        word = result.word;
+        numSyls = result.numSyls;
+        lineSyls += numSyls;
+        currentLine.concat(word);
+        if (lineSyls == target_syls) {
+          endPrevLine.concat(currentLine.slice(currentLine.length - 2));
+          return currentLine, endPrevLine;
+        }
+      }
+
+      //build lines 2 & 3
+      else {
+        currentLine.concat(endPrevLine);
+      }
+
+      while (true) {
+        prefix =
+          currentLine[currentLine.length - 2] +
+          " " +
+          currentLine[currentLine.length - 1];
+        wordChoices = wordAfterSingle(
+          prefix,
+          suffixMap2,
+          lineSyls,
+          targetSyls,
+          corpus
+        );
+        while (word_choices.length == 0) {
+          index = Math.floor(Math.random() * corpus.length - 2); //random.randint(0, corpus.length - 2);
+          prefix = corpus[index] + " " + corpus[index + 1];
+          logging.debug("new random prefix = %s", prefix);
+          word_choices = word_after_double(
+            prefix,
+            suffix_map_2,
+            line_syls,
+            target_syls
+          );
+        }
+        // # word = random.choice(word_choices)
+        // # num_syls = count_syllables(word)
+
+        const { word, numSyls } = getNumSyls(wordChoices);
+
+        console.log("ho", word, numSyls);
+
+        if (numSyls == 0) {
+          continue;
+        } else if (lineSyls + numSyls > targetSyls) {
+          continue;
+        } else if (lineSyls + numSyls < targetSyls) {
+          currentLine.concat(word);
+          lineSyls += numSyls;
+        } else if (lineSyls + numSyls === targetSyls) {
+          currentLine.concat(word);
+          break;
+        }
+      }
+
+      endPrevLine = [];
+      endPrevLine.concat(currentLine.slice(currentLine.length - 2));
+
+      if (line == "1") {
+        finalLine = [...currentLine];
+      } else {
+        finalLine = currentLine.slice(2);
+      }
+
+      return finalLine, endPrevLine;
+    };
+
+    const randomWord = (corpus) => {
+      console.log("random");
+      // ????
+      // random.seed(random.randint(1, 7000));
+      // let word = random.choice(corpus)
+      let word = corpus[Math.floor(Math.random() * corpus.length)];
+      //
+      console.log({ corpus, word });
+
+      let numSyls = countSyllables(word, corpus);
+      console.log({ word, numSyls });
+
+      if (numSyls > 4) {
+        randomWord(corpus);
+      } else if (numSyls == 0) {
+        randomWord(corpus);
+      } else {
+        console.log("here there");
+        return { word, numSyls };
+      }
+    };
+
+    const wordAfterSingle = (
+      prefix,
+      suffixMap,
+      currentSyls,
+      targetSyls,
+      corpus
+    ) => {
+      const acceptedWords = [];
+      let suffixes = suffixMap[prefix];
+      if (suffixes) {
+        console.log("suffixes", suffixes);
+
+        for (let candidate of suffixes) {
+          console.log("candidate", candidate);
+
+          let numSyls = countSyllables(candidate, corpus);
+          console.log({ numSyls, currentSyls, targetSyls });
+          if (currentSyls + numSyls <= targetSyls) {
+            acceptedWords.concat(candidate);
+          }
+        }
+      }
+      return acceptedWords;
+    };
+
+    const final = [];
+    const endPrevLine = [];
+    let line, endPrevLine2;
+    const { firstLine, endPrevLine1 } = constructHaikuLine(
+      suffixMap1,
+      suffixMap2,
+      corpus,
+      endPrevLine,
+      5
+    );
+    final.concat(firstLine);
+    ({ line, endPrevLine2 } = constructHaikuLine(
+      suffixMap1,
+      suffixMap2,
+      corpus,
+      endPrevLine1,
+      7
+    ));
+    final.concat(line);
+
+    ({ line } = constructHaikuLine(
+      suffixMap1,
+      suffixMap2,
+      corpus,
+      endPrevLine2,
+      5
+    ));
+
+    final.concat(line);
+    console.log({ final });
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -18,117 +285,21 @@ const Home = () => {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing
-          <code className={styles.code}>pages/index.js</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
+        <button className={styles.description} onClick={generate}>
+          generate haiku
+        </button>
       </main>
 
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{" "}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
+      <footer className={styles.footer}></footer>
     </div>
   );
 };
 
 export async function getStaticProps() {
   // const scrapedData = ourScraper.scrape()
-  const cmudict = new CMUDict();
   // const phoneme_str = cmudict.get("people's");
 
   let text = "";
-
-  const countSyllables = (word, corpus) => {
-    let numSyls = 0;
-
-    let phonemeStr = cmudict.get(word);
-
-    if (word.endsWith("'s") || word.endsWith("’s")) {
-      word = word.slice(0, word.length - 2);
-      phonemeStr = cmudict.get(word);
-      if (!phonemeStr) {
-        return countSyllables(
-          corpus[Math.floor(Math.random() * corpus.length)],
-          corpus
-        );
-      }
-
-      const phonemes = phonemeStr.split(" ");
-      for (const phoneme of phonemes) {
-        const lastChar = phoneme.slice(phoneme.length - 1);
-        if (Number.isInteger(parseInt(lastChar, 10))) {
-          numSyls += 1;
-        }
-      }
-    } else if (phonemeStr) {
-      // # hasattr(cmudict, word):
-      // # else:
-      // # print(cmudict[word])
-      const phonemes = phonemeStr.split(" ");
-
-      for (const phoneme of phonemes) {
-        const lastChar = phoneme.slice(phoneme.length - 1);
-        if (Number.isInteger(parseInt(lastChar, 10))) {
-          numSyls += 1;
-        }
-      }
-    }
-
-    if (numSyls === 0) {
-      return countSyllables(
-        corpus[Math.floor(Math.random() * corpus.length)],
-        corpus
-      );
-    }
-
-    // # else:
-    // #     return None
-    // #     num_sylls += 1
-    return numSyls;
-  };
 
   const { data } = await axios.get(
     // `https://api.nytimes.com/svc/community/v3?api-key=${process.env.API_KEY}`
@@ -177,7 +348,7 @@ export async function getStaticProps() {
     return testWTF;
   };
 
-  let commentsResult = await getComments();
+  let corpus = await getComments();
 
   const mapWordToWord = (corpus) => {
     "Load list & use dictionary to map word to word that follows.";
@@ -213,375 +384,16 @@ export async function getStaticProps() {
   // const comments =
   //   "Did you notice how you always have to thoroughly marinate or sauce it to death to make it palatable?   There's a reason for that - it's natural flavor.  While I haven't had it in many years, there's a reason for that too - it tastes like chicken with an over/under taste of fish.  Just not my cup of tea, & I'm a fairly adventurous eater. I'm a vegetarian so naturally a bit biased, but there is something especially sad about these images compared to other meats. My teen was asked what might we look back on in 2050 and think it was strange we did it. She said eating meat. I hope she's right. Just another reason I'm a vegetarian. Thank you for this wonderful article! I know one or two things about alligators. But just when I thought I knew pretty much everything about my world, I read this piece.... And thank you for the pictures! Barbaric.  Proud to be a vegetarian since 1996.  I don't participate in things such as this. I am not a vegetarian and believe if you kill an animal, you should eat it. But the culinary preparation of the alligator was nauseating and disrespectful. The farm grown alligators are managed very responsibly. After hatching, a portion are returned to the swamps to ensure the population is sustained.  Plus, in addition to the meat, all of the leather is used.  Cypress is a great local South LA brand doing just that. The one problem with eating alligator is the taste.  Tried it several times, very gamey and you have to hide that with all those spices.  Also, most people who enjoy it live in the south, so there's another reason. Someone was pulling this writer's pirogue.   A roux, made from browning flour and fat and is the base of many Cajun & Creole dishes. It is certainly not a condiment. However, a remoulade is made from a mayo base with many other seasonings and spices.   Nevertheless, it looked like good fun and great food.   Yrs, a LSU grad. This is disgusting. The lack of compassion and empathy for this creature is cringe-worthy. And Americans like to say the people of Asia are the cruel eaters ... I have only one word: Revolting. But, bon appétit to the eaters of reptile flesh, raw or cooked. Shouldn't they be called tailgators? Will the Bleeding Hearts kindly stick to Blood Sausage (boudin) and let the rest of us eat in peace? Chomp! Please stop consuming the planet for superfluous purposes.  Leave the alligators alone. what's the taste difference like in a Florida gator and one out of Louisiana? A man can live and be healthy without killing animals for food; therefore, if he eats meat, he participates in taking animal life merely for the sake of his appetite. - Tolstoy Thanks for exposing this.  I am calling it Tailgate. Seems ripe for weird animal to human disease spread.  Like pangolins and bats. Visit tailgate parties in Jacksonvill, FL in October during the annual UGA vs. University of FL. pretty much every UGA tailgate will have alligator on the menu. Better or worse than eating a battered, fried nugget from a chicken that spent its life in a mega-farm-factory? Dirty Jobs did an episode at an Alligator Farm in LA.    Its seared in my mind. I was born in northern Florida, and my family goes back generations there (I've since left) and I grew up in Gainesville. Always been a Gators fan.  And I've often enjoyed gator too. My father cooked a mean chili with gator meat, and served it battered as well.  I'm pleased that LSU fans respect our culinary tastes and respect the Gators too! I had the buffalo-sauce style gator bites at Cochon in New Orleans a few years ago, and they were amazing. Highly recommend. It's a cliche, but depending on how you prepare it, alligator tastes a lot like chicken.";
 
-  const suffixMap1 = mapWordToWord(commentsResult);
-  const suffixMap2 = map2WordsToWord(commentsResult);
+  const suffixMap1 = mapWordToWord(corpus);
+  const suffixMap2 = map2WordsToWord(corpus);
 
-  const constructHaikuLine = (
-    suffixMap1,
-    suffixMap2,
-    corpus,
-    endPrevLine,
-    targetSyls
-  ) => {
-    let line = "2/3";
-    let lineSyls = 0;
-    let currentLine = [];
+  console.log({ corpus });
 
-    //build first line
-    if (endPrevLine.length == 0) {
-      line = "1";
-      console.log({ corpus });
-      let stuff = randomWord(corpus);
-      console.log("stuff", stuff);
-      let { word, numSyls } = stuff;
-
-      if (numSyls == 0) {
-        return constructHaikuLine(
-          suffixMap1,
-          suffixMap2,
-          corpus,
-          endPrevLine,
-          targetSyls
-        );
-      }
-
-      currentLine.concat(word);
-      lineSyls += numSyls;
-      let wordChoices = wordAfterSingle(
-        word,
-        suffixMap1,
-        lineSyls,
-        targetSyls,
-        corpus
-      );
-      console.log({ word, wordChoices });
-
-      while (wordChoices.length == 0) {
-        // const prefix = random.choice(corpus)
-        const prefix = corpus[Math.floor(Math.random() * corpus.length)];
-        wordChoices = wordAfterSingle(
-          prefix,
-          suffixMap1,
-          lineSyls,
-          targetSyls,
-          corpus
-        );
-      }
-      // # word = random.choice(word_choices)
-      // # numSyls = count_syllables(word)
-
-      const result = getNumSyls(wordChoices);
-      word = result.word;
-      numSyls = result.numSyls;
-      lineSyls += numSyls;
-      currentLine.concat(word);
-      if (lineSyls == target_syls) {
-        endPrevLine.concat(currentLine.slice(currentLine.length - 2));
-        return currentLine, endPrevLine;
-      }
-    }
-
-    //build lines 2 & 3
-    else {
-      currentLine.concat(endPrevLine);
-    }
-
-    while (true) {
-      prefix =
-        currentLine[currentLine.length - 2] +
-        " " +
-        currentLine[currentLine.length - 1];
-      wordChoices = wordAfterSingle(
-        prefix,
-        suffixMap2,
-        lineSyls,
-        targetSyls,
-        corpus
-      );
-      while (word_choices.length == 0) {
-        index = Math.floor(Math.random() * corpus.length - 2); //random.randint(0, corpus.length - 2);
-        prefix = corpus[index] + " " + corpus[index + 1];
-        logging.debug("new random prefix = %s", prefix);
-        word_choices = word_after_double(
-          prefix,
-          suffix_map_2,
-          line_syls,
-          target_syls
-        );
-      }
-      // # word = random.choice(word_choices)
-      // # num_syls = count_syllables(word)
-
-      const { word, numSyls } = getNumSyls(wordChoices);
-
-      console.log("ho", word, numSyls);
-
-      if (numSyls == 0) {
-        continue;
-      } else if (lineSyls + numSyls > targetSyls) {
-        continue;
-      } else if (lineSyls + numSyls < targetSyls) {
-        currentLine.concat(word);
-        lineSyls += numSyls;
-      } else if (lineSyls + numSyls === targetSyls) {
-        currentLine.concat(word);
-        break;
-      }
-    }
-
-    endPrevLine = [];
-    endPrevLine.concat(currentLine.slice(currentLine.length - 2));
-
-    if (line == "1") {
-      finalLine = [...currentLine];
-    } else {
-      finalLine = currentLine.slice(2);
-    }
-
-    return finalLine, endPrevLine;
-  };
-
-  const randomWord = (corpus) => {
-    console.log("random");
-    // ????
-    // random.seed(random.randint(1, 7000));
-    // let word = random.choice(corpus)
-    let word = corpus[Math.floor(Math.random() * corpus.length)];
-    console.log({ corpus, word });
-
-    let numSyls = countSyllables(word, corpus);
-    console.log({ word, numSyls });
-
-    if (numSyls > 4) {
-      randomWord(corpus);
-    } else if (numSyls == 0) {
-      randomWord(corpus);
-    } else {
-      console.log("here there");
-      return { word, numSyls };
-    }
-  };
-
-  const wordAfterSingle = (
-    prefix,
-    suffixMap,
-    currentSyls,
-    targetSyls,
-    corpus
-  ) => {
-    const acceptedWords = [];
-    let suffixes = suffixMap[prefix];
-    console.log("suffixes", suffixes);
-    if (suffixes) {
-      for (let candidate of suffixes) {
-        let numSyls = countSyllables(candidate, corpus);
-        console.log({ numSyls, currentSyls, targetSyls });
-        if (currentSyls + numSyls <= targetSyls) {
-          acceptedWords.concat(candidate);
-        }
-      }
-    }
-    return acceptedWords;
-  };
-
-  const final = [];
-  const endPrevLine = [];
-  let line, endPrevLine2;
-  const { firstLine, endPrevLine1 } = constructHaikuLine(
-    suffixMap1,
-    suffixMap2,
-    commentsResult,
-    endPrevLine,
-    5
-  );
-  final.concat(firstLine);
-  ({ line, endPrevLine2 } = constructHaikuLine(
-    suffixMap1,
-    suffixMap2,
-    commentsResult,
-    endPrevLine1,
-    7
-  ));
-  final.concat(line);
-
-  ({ line } = constructHaikuLine(
-    suffixMap1,
-    suffixMap2,
-    commentsResult,
-    endPrevLine2,
-    5
-  ));
-
-  final.concat(line);
-
-  // const comments = [
-  //   "I am a cookbook author and trained chef. I’m dismayed but not surprised at how little folks care for copyright on recipes and the content that can surround them, like personal culinary reflections and the headnotes themselves.\n" +
-  //     "\n" +
-  //     "I get how the average reader feels – a ‘chocolate chip cookie, give or take a bit more this or that’ is still a chocolate chip cookie…unless you’re Mrs. Ruth Wakefield. Ditto for Coco Cola’s Dr. Pemberton, Caesar Salad originator Caesar Cardini among others.  It is the plight of recipe creators that their worked is seen as ubiquitous versus art or at least, some level of creativity.",
-  //   'At one extreme you have cooks that invent (or reinvent) variations on old themes, or record the foods of their ancestral cultures. At the other end you have community  groups that print books of "favourite recipes" as fund raisers. In between you have writers who make a living compiling cookbooks for people most of whom will never try the recipes but love reading about food.\n' +
-  //     "\n" +
-  //     "And then we have recipes passed on by word of mouth within families and social circles, often while cooking the dish.\n" +
-  //     "\n" +
-  //     'Fact is, most recipe books merely publicise what is already widely known and practiced. They are compilations of "prior art".\n' +
-  //     "\n" +
-  //     "Which of these modes of transmission result a recipe which may be protected by copyright? And how would one assess the damages? It's a legal quagmire. I don't see much incentive for lawyers to litigate such complex issues.\n" +
-  //     "\n" +
-  //     "We're left with good manners and courtesy, which seem to be in diminishing supply.",
-  //   "Recipes are all alike, just Google one of your favorite dishes and see how many virtually identical ones appear. I presume that's why cookbook authors write those interminable narratives, most of which invariably talk of how wonderful it was to bake with their grandmother as a child. I got a Ree Drummond's book for Christmas a couple years ago, and I could hardly lift it. But at least that content could be copyrighted. But the idea that recipes for lasagna rollups or coleslaw are intellectual property is ludicrous.",
-  //   "I recall that in Switzerland, it is possible to obtain a patent on a recipe.",
-  //   "Some of my recipes are so secret even I don't have a copy.",
-  //   "Sybaris, a Greek city-state in Southern Italy, some two and half millennia ago, reportedly had a law protecting “tasty dishes.” But today courts are reluctant to grant relief for property claimed in tastes. Furthermore, as “methods,” recipes seem excluded from copyright. As one jurist wrote, how to police cooks busy in their kitchens?",
-  //   "There's nothing new under the sun with respect to recipe ingredients. No ingredient list or written method of preparation, however, can transmit the verve, the inspiration, the je ne sais quoi of a talented, experienced cook - on a good day. \n" +
-  //     "Videos just might, though. I think those can be copyrighted.\n" +
-  //     " \n" +
-  //     "Over the last few years I have amassed a written database of recipes, limited in number to 2,000, some of which I have actually cooked. ALL of these are either inspired by or copied from other people's work. Even those I shamelessly ascribe to myself for some reason or another (mostly contrived reasons) are based on others' work - and their work, I'm sure, was based on others' as well. \n" +
-  //     "\n" +
-  //     "It's a blessing that some things can't be copyrighted, patented, walled off and kept secret. No one's life and limb depends on the quality of a plate of food, and constraining contentment would be the ultimate insult humans could inflict on each other. \n" +
-  //     "Imagine if someone were able to patent sex, and sue you for infringement.",
-  //   "Corn-on-the-cob cupcakes.  Why didnt I think of that?  I did once make carrot cupcakes and then once eggplant cupcakes but I can tell you.  They were not popular.  No one, I mean, no one tried the eggplant cupcake.  No one.  Not one person.",
-  //   "Similar issue with clothing. Who can protect their fashion designs? Also considered NOT usually eligible for copyright.",
-  //   "Most recipes are the product of “standing on the shoulders” of long passed-down recipes from antiquity. No recipes could be called distinctly unique forms of creation.",
-  //   "I have devised a recipe for a truly sugar free pecan pie and I’m not about to give out the recipe or giving out the secret ingredients of it to anyone and have them turn around and take credit for and profit from it. There’s too much of that going on.",
-  //   "40-odd years ago when my father was in the Air Force, he and my mother invited a couple over for dinner.  My mother made lasagna, and it turned out to be the wife's recipe: she had given it to a friend at a previous posting, who had moved and given it to my mother at the next base, and when my parents moved to a new base a few years later, my mother served it to its creator.   Over the years my mother made very few changes to the recipe. I wonder, if I decided to publish it, who I should credit?",
-  //   "The last thing this country needs is more copyright laws.",
-  //   "Someone stole my Chicken Poulet recipe.  And it was a tightly guarded secret.  Now, everyone makes Chicken Poulet.",
-  //   // 'This set of developments explains why recipes online are such a mess of narrative and junk text, and often very sketch about exact instructions.  It seems implausible that a set of code instructions for a computer can be copyright protected, but instructions for building a cake cannot.  Frankly it seems the courts got this one wrong.  On the other hand, this article goes to far to compare copying a set of published instructions word-for-word and taking credit for it, vs. publishing the first written recipe for an ethnic dish borrowed from African Americans.  The law of copyright favors the publication of inforamtion, not the hoarding of information.  It grants a monopoly to charge rents only in exchange for the public benefit of publication.  When someone is merely telling their closest relatives the "family recipe" orally, there is no copyright protection.  An individual who produces a "first copy" of written notes taken directly from those oral instruction owns a form of copyright, but on the other hand, when someone else gets that information from the source, rather than those notes, there is no copyright violation, since nothing copyright protected was every copied.  Same with recipes developed by experimentation. That is why a "slight variation" is enough to safe a recipe from a copyright violation.  Even though in other context, such deviations would be considered derivative works. The solution was thus to invalidate the whole copyright.',
-  //   "I’m sorry but the people who think they should have been able to copyright or protect “their” corn cupcake are off their rockers. Imagine where precedent as silly and ludicrous as that would lead. No one owns recipes. Prose and stories are another thing. But putting jellybeans on a cupcake isn’t something we should be protecting or even necessarily crediting.",
-  //   "Isn't there a copy of the de-circulated cookbook Makan (spine upside-down) in the background of the photo of Slotnick?",
-  //   `Of course, this lawsuit isn't about "lifting" a recipe, but an entire book, including family stories that someone else said were hers.  That's not about the recipe, but the book itself.  And it was plagiarism.  But feel secure about your recipes!`,
-  //   "Food is love....\n" +
-  //     'I know that sounds like a "cheezy" holiday card....\n' +
-  //     "but the fact is , on so many levels...\n" +
-  //     "mentally, physically, spiritually, symbolically, food is love...\n" +
-  //     "so it is poignant and hopeful that our society, our culture has decided that recipes cannot be copy written and therefore must by their very nature be shared and passed on...\n" +
-  //     "you cannot put a price on love...",
-  //   "As I read this about recipes being basically  same ones over and over again and maybe slightly changed . Still it is broiled chicken    \n" +
-  //     "\n" +
-  //     "It remind me as I read the internet news events   and it is the same story on each news site with a few words changed  ...but still same chicken",
-  //   "Kitchen politics, always timely during the holidays.",
-  //   "I’ve been a NYT reader for about 60 years. Happily switched to digital NYT. Intermittently used the free recipes available but became totally annoyed by conversion to an extra charge for reading the recipes, and the little ad that practically admonishes you if you click on a recipe, that now I avoid the whole recipe venture. What other areas of the paper will be carved away? The ill will this has generated needlessly harms the public impression of the paper and its mission.",
-  //   "I wish this story would have provided more detail about the anecdotes/reminiscences that were also suspect. That seems much more straightforward to understand why it is wrong. But perhaps such an article wouldn’t generate as much reader engagement?",
-  //   "‘on the cover of a women’s magazine‘‘\n" +
-  //     "\n" +
-  //     "Why not name the magazine? Maybe the law can’t solve the issue but [ex]consumers of the magazine can.",
-  //   "Most of the recipes that I now use come from The New York Times. All of the recipes appear to give credit to the person who developed the recipe. This should be the normal practice for all cookbooks. One other consideration is whether the author or the person who compiled the cookbook has actually tried the recipes in the book. Listing substitutions for some ingredients is often a clue that the author tried the recipe.",
-  // ],[
-  //   // "Did you notice how you always have to thoroughly marinate or sauce it to death to make it palatable?   There's a reason for that - it's natural flavor.\n" +
-  //     "\n" +
-  //     "While I haven't had it in many years, there's a reason for that too - it tastes like chicken with an over/under taste of fish.  Just not my cup of tea, & I'm a fairly adventurous eater.",
-  //   "I'm a vegetarian so naturally a bit biased, but there is something especially sad about these images compared to other meats.",
-  //   "My teen was asked what might we look back on in 2050 and think it was strange we did it. She said eating meat. I hope she's right.",
-  //   "Just another reason I'm a vegetarian.",
-  //   "Thank you for this wonderful article!\n" +
-  //     "I know one or two things about alligators.\n" +
-  //     "But just when I thought I knew pretty much everything about my world, I read this piece....\n" +
-  //     "And thank you for the pictures!",
-  //   "Barbaric.\n" +
-  //     "\n" +
-  //     "Proud to be a vegetarian since 1996.\n" +
-  //     "\n" +
-  //     "I don't participate in things such as this.",
-  //   "I am not a vegetarian and believe if you kill an animal, you should eat it. But the culinary preparation of the alligator was nauseating and disrespectful.",
-  //   'The farm grown alligators are managed very responsibly. After hatching, a portion are returned to the swamps to ensure the population is sustained.  Plus, in addition to the meat, all of the leather is used.  Cypress is a great local South LA brand doing just that.  <a href="https://cypressbrand.com" target="_blank">https://cypressbrand.com</a>/',
-  //   "The one problem with eating alligator is the taste.  Tried it several times, very gamey and you have to hide that with all those spices.  Also, most people who enjoy it live in the south, so there's another reason.",
-  //   "Someone was pulling this writer's pirogue. \n" +
-  //     "\n" +
-  //     "A roux, made from browning flour and fat and is the base of many Cajun & Creole dishes. It is certainly not a condiment. However, a remoulade is made from a mayo base with many other seasonings and spices. \n" +
-  //     "\n" +
-  //     "Nevertheless, it looked like good fun and great food. \n" +
-  //     "\n" +
-  //     "Yrs, a LSU grad.",
-  //   "This is disgusting. The lack of compassion and empathy for this creature is cringe-worthy.",
-  //   "And Americans like to say the people of Asia are the cruel eaters ...",
-  //   "I have only one word: Revolting. But, bon appétit to the eaters of reptile flesh, raw or cooked.",
-  //   "Shouldn't they be called tailgators?",
-  //   "Will the Bleeding Hearts kindly stick to Blood Sausage (boudin) and let the rest of us eat in peace?\n" +
-  //     "Chomp!",
-  //   "Please stop consuming the planet for superfluous purposes.  Leave the alligators alone.",
-  //   "what's the taste difference like in a Florida gator and one out of Louisiana?",
-  //   '""A man can live and be healthy without killing animals for food; therefore, if he eats meat, he participates in taking animal life merely for the sake of his appetite." - Tolstoy',
-  //   "Thanks for exposing this.\n\nI am calling it Tailgate.",
-  //   "Seems ripe for weird animal to human disease spread.\n" +
-  //     "\n" +
-  //     "Like pangolins and bats.",
-  //   "Visit tailgate parties in Jacksonvill, FL in October during the annual UGA vs. University of FL. pretty much every UGA tailgate will have alligator on the menu.",
-  //   "Better or worse than eating a battered, fried nugget from a chicken that spent its life in a mega-farm-factory?",
-  //   "Dirty Jobs did an episode at an Alligator Farm in LA.    Its seared in my mind.",
-  //   "I was born in northern Florida, and my family goes back generations there (I've since left) and I grew up in Gainesville. Always been a Gators fan.  And I've often enjoyed gator too. My father cooked a mean chili with gator meat, and served it battered as well.  I'm pleased that LSU fans respect our culinary tastes and respect the Gators too!",
-  //   "I had the buffalo-sauce style gator bites at Cochon in New Orleans a few years ago, and they were amazing. Highly recommend. It's a cliche, but depending on how you prepare it, alligator tastes a lot like chicken."
-  // ],[
-  //   "The more fundamental problem is that there are just too many restaurants in neighborhoods like the East Village or LES.  They used to be real neighborhoods filled with every sort of community based shops from shoe repair to bread bakeries to barbers on down.  In 1980 one could probably count the number of restaurants in the East Village on two hands and they were all affordable.   Now there is nothing but in every nook and cranny, many with more seating in the outdoor sheds than could have ever have fit inside. And all with a few exceptions grossly overpriced.    \n" +
-  //     "\n" +
-  //     "The State is not even following its own 500 foot rule, handing out exemptions like candy with CBs filled with restaurant owners calling the shots.   The quality of life in the EV and LES has fallen to the point being some third world honky tonk shantytown due largely to these out of control rat infested dining sheds.",
-  //   "What is wrong with these people sitting in freezing weather on the curb eating among fumes, noise, garbage and vermin when restaurants are open?These sidewalk outhouses are not “outdoor” dining areas. The experience is just so disgusting. Time to get rid of them.",
-  //   "Winter outdoor dining is silly and should be stopped. I’ve been dining indoors since July 2020 when surrounding states began to permit it. Don’t want to dine in? Take out.",
-  //   "All this bickering is making me lose my apetite!",
-  //   "Don't discount the rats that have taken up residence in these glorified outhouses",
-  //   "I prefer to eat indoors in most restaurants even during warm weather. I'd rather suffer the din of voices inside a restaurant than the honking and motor of cars outside, particularly on the avenues.",
-  //   "No.  I won't",
-  //   "Guess who's the most vocal against dining sheds in the street?  Yup, car owners, who are 'outraged' that a few Free Public parking spaces are being 'stolen' from them.  They then (cleverly) try to deflect attention from themselves, and toss around stories of sheds being full of rats (as if NYC never had rats otherwise) and homeless people (as if NYC never had homeless everywhere)?\n" +
-  //     "\n" +
-  //     "It's nice to see NYC becoming more like Europe vis-a-vis socializing and people-watching in the great outdoors.  Next up should be banning private-use vehicles (particularly those that have purposefully threatening/deadly frames and accessories - bull bars, illegal tinted windows, jumbo tires, etc.) from our densely-populated streets.",
-  //   "This story is accompanied by a photo of street shed on an uncrowded Brooklyn block. Very manipulative photo choice.\n" +
-  //     "\n" +
-  //     "There should have been a photo of crowded areas in the LES, East Village, West Village, Upper East and Upper West Side where there is no space on the sidewalk, entire blocks are now restaurant sheds, restaurants have expanded sidewalk seating plus street sheds, garbage bags are piled high...",
-  //   "The NYC Department of Transportation is asking for responses through December 31 to their survey regarding continuing the Open Restaurants program  -- it is here:  \n" +
-  //     "\n" +
-  //     '<a href="https://nycdotsurveys.info/survey/open-restaurants-survey" target="_blank">https://nycdotsurveys.info/survey/open-restaurants-survey</a>',
-  //   "Nope! I will go inside & enjoy my meal",
-  //   "Since this is complain o rama…also annoying are the clumps of clueless patrons standing in the middle of the remaining sliver of sidewalk waiting to get into the sheds. The new breed here are really lacking in street smarts,or plain old consideration of others.",
-  //   "Will I dine outdoors in cold weather ?\n" +
-  //     "You betcha !!!\n" +
-  //     "Vaxxed  & boosted with  an extra layer to accommodate the weather & enjoy the street theater that is unique to New York !\n" +
-  //     "Please remember to tip your servers generously.",
-  //   "It's interesting that the Times has chosen to illustrate the top of this article with a photo of a broad expanse of evenly paved sidewalk in BROOKLYN  with plenty of space for pedestrians or wheelchair users to get by. This is a spot that's very neatly kept, and where the pavement appears to have been washed down.\n" +
-  //     "\n" +
-  //     "How about if the Times sends a photographer to 3rd Avenue between 10th-14th Streets in Manhattan, to show what THAT looks like? It would be a very, very different image - one that would remind you of a slum.",
-  //   "Unless you are fat or old, if vaccinated you really don't need to worry about the coronavirus anymore. Omicron isn't even an issue in South Africa.\n" +
-  //     "\n" +
-  //     "If you are fat and unvaccinated, you will likely die of the coronavirus and I don't want to pay for you and your bad decisions.",
-  //   "I love JAMES so much and Deborah Williamson has been doing such an amazing job to feed the neighborhood through all the phases of the pandemic. The food is spectacular. And love the outdoor space.",
-  //   "Our restaurants reopened in late May (or maybe it was early June) 2020 after a few months of closure.  My BF and I, and our friends, have been dining indoors and enjoying local restaurants ever since.  We got vaccinated and boosted as soon as we were eligible.  I’m always interested to be able to read about people with different viewpoints, such as, on the one hand, restaurant/social hesitancy, and, on the other, vaccine hesitancy.",
-  //   "Those outdoor sheds are beyond ugly, dirty and disgusting.  Besides, my own food is infintely better than the food in most NYC restaurants, so unless I go to a top tier restaurant, I will eat at home.",
-  //   'BTW check out the "survey" on the NYC DOT website about street sheds.\n' +
-  //     "\n" +
-  //     "The survey can be answered by anyone, anywhere and apparently multiple times - no controls, not scientific etc.\n" +
-  //     "\n" +
-  //     "A neighbor in the restaurant business mentioned that the restaurant owners are actively messaging about completing the survey...",
-  //   "The delta wave barely made a dent in New York. I’m vaxxed and boosted. Since I’m not an anti-vaxxers I actually believe it works. I’ve been dining in since this summer and will continue to do so.\n" +
-  //     "\n" +
-  //     "It’s been two years since we first heard of Covid-19, it’s been 21 months since the lockdown. The recommendations don’t seem to change at all, regardless of how many are vaccinated around us. This omicron scare was the final straw for me. I’ve frankly had enough.\n" +
-  //     "\n" +
-  //     "\n" +
-  //     "The virus is here to stay, it will keep mutating. When the next updated vaccine comes I will take that too. Meanwhile I intend to get on with my life.",
-  //   "For the last few decades we have promoted tight windows with reduced hear loss and control over skyrocketing energy cost and use.  Now you want plastic walled shanties with by law one open wall to sit at and shiver while some gloved waitstaff runs in and out of a heated building wasting more energy than before? \n" +
-  //     "\n" +
-  //     "The absolute height of foolishness.",
-  //   "YES. . .\n" +
-  //     "\n" +
-  //     "but regulate the sheds\n" +
-  //     "\n" +
-  //     "and, related to dining. . . \n" +
-  //     "\n" +
-  //     "enforce traffic laws increasingly broken by delivery workers who drive on sidewalks and against traffic!",
-  //   "I find the idea of outdoor dining to be absurd. The temperature is never quite right. Someone has to sit too close to the heater, while another person is too far. If steps are taken to keep the heat inside, they have to restrict the airflow, which defeats the whole purpose. As soon as indoor dining was permitted, I resumed eating inside, and will continue to do so.",
-  //   "I like the new outdoor dining spaces overall, but will someone explain to me why those that are Completely Enclosed are better than indoor dining? Many are open on one side, and have heat lamps so I am comfortable there, but it seems to me those that are completely enclosed are more dangerous than dining inside with lower ceilings and poor air circulation. Is anyone regulating this??",
-  //   "I will never eat in any restaurant's outdoor shed - not now, not ever.\n" +
-  //     "\n" +
-  //     "In cold weather if the shed is adequately ventilated (as is required) then it HAS to be too cold for most people to be able to relax and eat a meal. IMO, these sheds are just small Covid-spreader hubs.\n" +
-  //     "\n" +
-  //     "Oh, and then there's the climate impact of all the outdoor heaters. It is the equivalent of trying to use an air-conditioner in an outdoor space - an absolute waste of time, money, & energy.\n" +
-  //     "\n" +
-  //     "IF you actually care about climate change, you CANNOT support the use of dining sheds in the winter.\n" +
-  //     "\n" +
-  //     "And in the summer, let's just default to outdoor tables (which require PERMITS, as is normal in a densely-populated city).")
-  // ];
-
-  // comments.replace("\n", " ").split();
-  // console.log(comments);
   return {
     props: {
-      title: "test",
+      corpus,
+      suffixMap1,
+      suffixMap2,
     },
     revalidate: 86400, // once a  day
   };

@@ -8,6 +8,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@stdlib/datasets-cmudict": "^0.0.7",
     "axios": "^0.24.0",
     "cheerio": "^1.0.0-rc.10",
     "cmudict": "^1.0.2",
