@@ -7,22 +7,24 @@ import cmudict from "@stdlib/datasets-cmudict";
 import styles from "../styles/Home.module.css";
 
 const Home = ({ suffixMap1, suffixMap2, corpus }) => {
+  console.log({ suffixMap1, suffixMap2, corpus });
   const { dict } = cmudict();
-  debugger;
   const generate = () => {
     console.log({ suffixMap1, suffixMap2, corpus });
-    const countSyllables = (word, corpus) => {
+    const countSyllables = (word) => {
       let numSyls = 0;
+      let upperCaseWord = word.toUpperCase();
+      console.log("wtf", upperCaseWord);
 
-      let phonemeStr = dict[word.toUpperCase()];
-      console.log({ phonemeStr });
-      console.log(word.toUpperCase());
+      let phonemeStr = dict[upperCaseWord];
+      console.log({ corpus, phonemeStr });
       // console.log({ dict });
       // debugger;
 
-      if (word.endsWith("'s") || word.endsWith("’s")) {
-        word = word.slice(0, word.length - 2);
-        phonemeStr = dict[word];
+      if (upperCaseWord.endsWith("'S") || upperCaseWord.endsWith("’S")) {
+        upperCaseWord = upperCaseWord.slice(0, upperCaseWord.length - 2);
+        phonemeStr = dict[upperCaseWord];
+        debugger;
         // console.log({ phonemeStr });
 
         if (!phonemeStr) {
@@ -55,6 +57,8 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
       }
 
       if (numSyls === 0) {
+        debugger;
+
         return countSyllables(
           corpus[Math.floor(Math.random() * corpus.length)],
           corpus
@@ -64,7 +68,22 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
       // # else:
       // #     return None
       // #     num_sylls += 1
+      console.log({ numSyls });
+      debugger;
       return numSyls;
+    };
+
+    const getNumSyls = (wordChoices) => {
+      let word = wordChoices[Math.floor(Math.random() * wordChoices.length)];
+      // word = random.choice(wordChoices);
+      let numSyls = countSyllables(word);
+      if (numSyls == 0) {
+        wordChoices.filter((item) => item !== word);
+        // random.seed(random.randint(1, 7000))
+        getNumSyls(wordChoices);
+      }
+
+      return word, numSyls;
     };
 
     const constructHaikuLine = (
@@ -107,7 +126,7 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
         );
         console.log({ word, wordChoices });
 
-        while (wordChoices.length == 0) {
+        while (wordChoices.length === 0) {
           // const prefix = random.choice(corpus)
           console.log("here", { wordChoices });
 
@@ -119,6 +138,7 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
             targetSyls,
             corpus
           );
+          console.log("there", { wordChoices });
         }
         // # word = random.choice(word_choices)
         // # numSyls = count_syllables(word)
@@ -128,7 +148,7 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
         numSyls = result.numSyls;
         lineSyls += numSyls;
         currentLine.concat(word);
-        if (lineSyls == target_syls) {
+        if (lineSyls == targetSyls) {
           endPrevLine.concat(currentLine.slice(currentLine.length - 2));
           return currentLine, endPrevLine;
         }
@@ -151,15 +171,15 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
           targetSyls,
           corpus
         );
-        while (word_choices.length == 0) {
-          index = Math.floor(Math.random() * corpus.length - 2); //random.randint(0, corpus.length - 2);
+        while (wordChoices.length == 0) {
+          console.log("hey hey", { wordChoices });
+          let index = Math.floor(Math.random() * corpus.length - 2); //random.randint(0, corpus.length - 2);
           prefix = corpus[index] + " " + corpus[index + 1];
-          logging.debug("new random prefix = %s", prefix);
-          word_choices = word_after_double(
+          wordChoices = wordAfterSingle(
             prefix,
-            suffix_map_2,
-            line_syls,
-            target_syls
+            suffixMap2,
+            lineSyls,
+            targetSyls
           );
         }
         // # word = random.choice(word_choices)
@@ -207,13 +227,14 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
       console.log({ word, numSyls });
 
       if (numSyls > 4) {
-        randomWord(corpus);
-      } else if (numSyls == 0) {
-        randomWord(corpus);
-      } else {
-        console.log("here there");
-        return { word, numSyls };
+        return randomWord(corpus);
       }
+      if (numSyls == 0) {
+        return randomWord(corpus);
+      }
+      console.log("here there");
+      debugger;
+      return { word, numSyls };
     };
 
     const wordAfterSingle = (
@@ -233,11 +254,15 @@ const Home = ({ suffixMap1, suffixMap2, corpus }) => {
 
           let numSyls = countSyllables(candidate, corpus);
           console.log({ numSyls, currentSyls, targetSyls });
+          console.log("currentSyls + numSyls", currentSyls + numSyls);
           if (currentSyls + numSyls <= targetSyls) {
-            acceptedWords.concat(candidate);
+            console.log({ candidate });
+
+            acceptedWords.push(candidate);
           }
         }
       }
+      console.log({ acceptedWords });
       return acceptedWords;
     };
 
@@ -319,7 +344,7 @@ export async function getStaticProps() {
         );
         const comments = data2.results.comments.map((comment) =>
           comment?.commentBody
-            .replace(/\?|!|,|;|\./g, "")
+            .replace(/\?|!|,|;|\(|\)|"|[0-9]|\./g, "")
             .split("\n")
             .join(" ")
             // .replace(/\?|!|,|./g, "")
@@ -395,7 +420,7 @@ export async function getStaticProps() {
       suffixMap1,
       suffixMap2,
     },
-    revalidate: 86400, // once a  day
+    // revalidate: 86400, // once a  day
   };
 }
 
